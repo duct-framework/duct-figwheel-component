@@ -11,16 +11,16 @@
       component
       (let [server  (fig-core/start-server component)
             builder (auto/make-conditional-builder (fig-auto/builder server))
-            builds  (mapv auto/prep-build builds)]
-        (assoc component :server server, :builder builder, :active-builds builds))))
+            state   (atom (mapv auto/prep-build builds))]
+        (assoc component :server server, :builder builder, :state state))))
   (stop [component]
     (if-let [server (:server component)]
       (do (fig-core/stop-server server)
-          (dissoc component :server :builder :active-builds))
+          (dissoc component :server :builder :state))
       component)))
 
-(defn build [server]
-  (assoc server :active-builds (mapv (:builder server) (:active-builds server))))
+(defn build [{:keys [state builder]}]
+  (swap! state (partial mapv builder)) nil)
 
 (defn server [options]
   (map->Server options))
