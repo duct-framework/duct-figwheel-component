@@ -9,15 +9,12 @@
             [ring.middleware.cors :as cors]))
 
 (defrecord FigwheelBuild [])
-
-(defmethod clojure.core/print-method FigwheelBuild
-  [system ^java.io.Writer writer]
-  (.write writer "#<FigwheelBuild>"))
-
 (defrecord FigwheelServer [])
 
-(defmethod clojure.core/print-method FigwheelServer
-  [system ^java.io.Writer writer]
+(defmethod print-method FigwheelBuild [_ ^java.io.Writer writer]
+  (.write writer "#<FigwheelBuild>"))
+
+(defmethod print-method FigwheelServer [_ ^java.io.Writer writer]
   (.write writer "#<FigwheelServer>"))
 
 (defn- figwheel-server [state]
