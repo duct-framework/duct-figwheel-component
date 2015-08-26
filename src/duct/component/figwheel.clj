@@ -1,8 +1,12 @@
 (ns duct.component.figwheel
   (:require [clojurescript-build.auto :as auto]
             [com.stuartsierra.component :as component]
+            [compojure.core :as compojure :refer [GET]]
+            [compojure.route :as route]
             [figwheel-sidecar.core :as fig-core]
-            [figwheel-sidecar.auto-builder :as fig-auto]))
+            [figwheel-sidecar.auto-builder :as fig-auto]
+            [org.httpkit.server :as httpkit]
+            [ring.middleware.cors :as cors]))
 
 (defrecord FigwheelBuild [])
 
@@ -16,6 +20,24 @@
   [system ^java.io.Writer writer]
   (.write writer "#<FigwheelServer>"))
 
+(defn- figwheel-server [state]
+  (-> (compojure/routes
+       (GET "/figwheel-ws/:desired-build-id" [] (fig-core/reload-handler state))
+       (GET "/figwheel-ws" [] (fig-core/reload-handler state))
+       (route/not-found "<h1>Page not found</h1>"))
+      (cors/wrap-cors
+       :access-control-allow-origin #".*"
+       :access-control-allow-methods [:head :options :get :put :post :delete :patch])
+      (httpkit/run-server
+       {:port      (:server-port state)
+        :server-ip (:server-ip state "0.0.0.0")
+        :worker-name-prefix "figwh-httpkit-"})))
+
+(defn- start-figwheel-server [opts]
+  (let [state  (fig-core/create-initial-state (fig-core/resolve-ring-handler opts))
+        server (figwheel-server state)]
+    (map->FigwheelServer (assoc state :http-server server))))
+
 (defn- start-build [builder build]
   (-> build auto/prep-build builder map->FigwheelBuild))
 
@@ -24,7 +46,7 @@
   (start [component]
     (if (:server component)
       component
-      (let [server  (map->FigwheelServer (fig-core/start-server component))
+      (let [server  (start-figwheel-server component)
             builder (auto/make-conditional-builder (fig-auto/builder server))
             state   (atom (mapv (partial start-build builder) builds))]
         (assoc component :server server, :builder builder, :state state))))
