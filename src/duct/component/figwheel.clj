@@ -11,7 +11,7 @@
       component
       (let [server  (fig-core/start-server component)
             builder (auto/make-conditional-builder (fig-auto/builder server))
-            state   (atom (mapv auto/prep-build builds))]
+            state   (atom (mapv (comp builder auto/prep-build) builds))]
         (assoc component :server server, :builder builder, :state state))))
   (stop [component]
     (if-let [server (:server component)]
@@ -19,8 +19,11 @@
           (dissoc component :server :builder :state))
       component)))
 
+(defn rebuild [{:keys [state builds builder]}]
+  (reset! state (mapv (comp builder auto/prep-build) builds)))
+
 (defn build [{:keys [state builder]}]
-  (swap! state (partial mapv builder)) nil)
+  (swap! state (partial mapv builder)))
 
 (defn server [options]
   (map->Server options))

@@ -7,7 +7,8 @@
                  [org.clojure/clojurescript "1.7.48" :scope "provided"]
                  [com.stuartsierra/component "0.2.3"]
                  [figwheel-sidecar "0.3.7"]
-                 [clojurescript-build "0.1.8"]]
+                 [clojurescript-build "0.1.8"]
+                 [http-kit "2.1.19"]]
   :profiles
   {:dev {:source-paths   ["dev/src/clj"]
          :resource-paths ["dev/resources" "target/js"]
