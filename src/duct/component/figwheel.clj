@@ -1,4 +1,5 @@
 (ns duct.component.figwheel
+  "A component for running Figwheel servers."
   (:require [clojurescript-build.auto :as auto]
             [com.stuartsierra.component :as component]
             [compojure.core :as compojure :refer [GET]]
@@ -53,14 +54,25 @@
           (dissoc component :server :builder :state))
       component)))
 
-(defn rebuild-cljs [{:keys [state builds builder]}]
+(defn rebuild-cljs
+  "Tell a Figwheel server component to rebuild all ClojureScript source files,
+  and to send the new code to the connected clients."
+  [{:keys [state builds builder]}]
   (reset! state (mapv (partial start-build builder) builds)) nil)
 
-(defn build-cljs [{:keys [state builder]}]
+(defn build-cljs
+  "Tell a Figwheel server component to build any modified ClojureScript source
+  files, and to send the new code to the connected clients."
+  [{:keys [state builder]}]
   (swap! state (partial mapv builder)) nil)
 
-(defn refresh-css [{:keys [server]}]
+(defn refresh-css
+  "Tell a Figwheel server component to update the CSS of connected clients."
+  [{:keys [server]}]
   (fig-core/check-for-css-changes server) nil)
 
-(defn server [options]
+(defn server
+  "Create a new Figwheel server with the supplied option map. See the Figwheel
+  documentation for a full explanation of what options are allowed."
+  [options]
   (map->Server options))
