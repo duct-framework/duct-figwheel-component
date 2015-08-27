@@ -13,10 +13,11 @@
   (route/not-found "<h1>Not Found</h1>"))
 
 (def figwheel-config
-  {:builds [{:source-paths ["dev/src/cljs"]
-             :build-options {:output-to "target/js/public/main.js"
-                             :output-dir "target/js/public"
-                             :optimizations :none}}]})
+  {:css-dirs ["dev/resources"]
+   :builds   [{:source-paths ["dev/src/cljs"]
+               :build-options {:output-to "target/js/public/main.js"
+                               :output-dir "target/js/public"
+                               :optimizations :none}}]})
 
 (defn new-system []
   (-> (component/system-map

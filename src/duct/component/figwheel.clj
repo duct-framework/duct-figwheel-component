@@ -53,11 +53,14 @@
           (dissoc component :server :builder :state))
       component)))
 
-(defn rebuild [{:keys [state builds builder]}]
+(defn rebuild-cljs [{:keys [state builds builder]}]
   (reset! state (mapv (partial start-build builder) builds)))
 
-(defn build [{:keys [state builder]}]
+(defn build-cljs [{:keys [state builder]}]
   (swap! state (partial mapv builder)))
+
+(defn refresh-css [{:keys [server]}]
+  (fig-core/check-for-css-changes server))
 
 (defn server [options]
   (map->Server options))
