@@ -54,13 +54,13 @@
       component)))
 
 (defn rebuild-cljs [{:keys [state builds builder]}]
-  (reset! state (mapv (partial start-build builder) builds)))
+  (reset! state (mapv (partial start-build builder) builds)) nil)
 
 (defn build-cljs [{:keys [state builder]}]
-  (swap! state (partial mapv builder)))
+  (swap! state (partial mapv builder)) nil)
 
 (defn refresh-css [{:keys [server]}]
-  (fig-core/check-for-css-changes server))
+  (fig-core/check-for-css-changes server) nil)
 
 (defn server [options]
   (map->Server options))
