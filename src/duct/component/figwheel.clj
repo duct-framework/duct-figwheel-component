@@ -7,7 +7,8 @@
             [figwheel-sidecar.core :as fig-core]
             [figwheel-sidecar.auto-builder :as fig-auto]
             [org.httpkit.server :as httpkit]
-            [ring.middleware.cors :as cors]))
+            [ring.middleware.cors :as cors]
+            [suspendable.core :as suspendable]))
 
 (defrecord FigwheelBuild [])
 (defrecord FigwheelServer [])
@@ -39,21 +40,6 @@
 (defn- start-build [builder build]
   (-> build auto/prep-build builder map->FigwheelBuild))
 
-(defrecord Server [builds]
-  component/Lifecycle
-  (start [component]
-    (if (:server component)
-      component
-      (let [server  (start-figwheel-server component)
-            builder (auto/make-conditional-builder (fig-auto/builder server))
-            state   (atom (mapv (partial start-build builder) builds))]
-        (assoc component :server server, :builder builder, :state state))))
-  (stop [component]
-    (if-let [server (:server component)]
-      (do (fig-core/stop-server server)
-          (dissoc component :server :builder :state))
-      component)))
-
 (defn rebuild-cljs
   "Tell a Figwheel server component to rebuild all ClojureScript source files,
   and to send the new code to the connected clients."
@@ -70,6 +56,30 @@
   "Tell a Figwheel server component to update the CSS of connected clients."
   [{:keys [server]}]
   (fig-core/check-for-css-changes server) nil)
+
+(defrecord Server [builds]
+  component/Lifecycle
+  (start [component]
+    (if (:server component)
+      component
+      (let [server  (start-figwheel-server component)
+            builder (auto/make-conditional-builder (fig-auto/builder server))
+            state   (atom (mapv (partial start-build builder) builds))]
+        (assoc component :server server, :builder builder, :state state))))
+  (stop [component]
+    (if-let [server (:server component)]
+      (do (fig-core/stop-server server)
+          (dissoc component :server :builder :state))
+      component))
+  suspendable/Suspendable
+  (suspend [component] component)
+  (resume [component old-component]
+    (if (and (:server old-component) (= builds (:builds old-component)))
+      (doto (into component (select-keys old-component [:server :builder :state]))
+        (build-cljs)
+        (refresh-css))
+      (do (component/stop old-component)
+          (component/start component)))))
 
 (defn server
   "Create a new Figwheel server with the supplied option map. See the Figwheel
