@@ -12,7 +12,7 @@ system).
 
 Add the following dependency to your `project.clj`:
 
-    [duct/figwheel-component "0.1.0"]
+    [duct/figwheel-component "0.2.0"]
 
 ## Usage
 
