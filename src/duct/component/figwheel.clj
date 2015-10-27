@@ -6,6 +6,7 @@
             [compojure.route :as route]
             [figwheel-sidecar.core :as fig-core]
             [figwheel-sidecar.auto-builder :as fig-auto]
+            [figwheel-sidecar.repl :as fig-repl]
             [org.httpkit.server :as httpkit]
             [ring.middleware.cors :as cors]
             [suspendable.core :as suspendable]))
@@ -56,6 +57,16 @@
   "Tell a Figwheel server component to update the CSS of connected clients."
   [{:keys [server]}]
   (fig-core/check-for-css-changes server) nil)
+
+(defn cljs-repl
+  "Open a ClojureScript REPL through the Figwheel server."
+  ([{:keys [server builds]}]
+   (assert (not (empty? builds)))
+   (fig-repl/repl (first builds) server))
+  ([{:keys [server builds]} build-id]
+   (let [chosen-build (-> (group-by :id builds) (get build-id))]
+     (assert (not (nil? chosen-build)))
+     (fig-repl/repl chosen-build server))))
 
 (defrecord Server [builds]
   component/Lifecycle

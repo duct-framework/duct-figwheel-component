@@ -14,7 +14,8 @@
 
 (def figwheel-config
   {:css-dirs ["dev/resources"]
-   :builds   [{:source-paths ["dev/src/cljs"]
+   :builds   [{:id :dev
+               :source-paths ["dev/src/cljs"]
                :build-options {:output-to "target/js/public/main.js"
                                :output-dir "target/js/public"
                                :optimizations :none}}]})
