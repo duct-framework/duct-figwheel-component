@@ -62,11 +62,11 @@
   "Open a ClojureScript REPL through the Figwheel server."
   ([{:keys [server builds]}]
    (assert (not (empty? builds)))
-   (fig-repl/repl (first builds) server))
+   (fig-repl/repl (auto/prep-build (first builds)) server))
   ([{:keys [server builds]} build-id]
    (let [chosen-build (-> (group-by :id builds) (get build-id))]
      (assert (not (nil? chosen-build)))
-     (fig-repl/repl chosen-build server))))
+     (fig-repl/repl (auto/prep-build chosen-build) server))))
 
 (defrecord Server [builds]
   component/Lifecycle
