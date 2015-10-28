@@ -17,4 +17,6 @@
          :dependencies [[reloaded.repl "0.2.1"]
                         [ring-jetty-component "0.3.0"]
                         [compojure "1.4.0"]
-                        [figwheel "0.4.1"]]}})
+                        [figwheel "0.4.1"]
+                        [org.clojure/tools.nrepl "0.2.10"]]
+         :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}})
