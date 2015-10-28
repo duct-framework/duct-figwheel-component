@@ -9,12 +9,12 @@
                  [suspendable "0.1.0"]
                  [figwheel-sidecar "0.4.1"]
                  [clojurescript-build "0.1.9"]
-                 [http-kit "2.1.19"]]
+                 [http-kit "2.1.19"]
+                 [com.cemerick/piggieback "0.2.1"]]
   :profiles
   {:dev {:source-paths   ["dev/src/clj"]
          :resource-paths ["dev/resources" "target/js"]
          :dependencies [[reloaded.repl "0.2.1"]
                         [ring-jetty-component "0.3.0"]
                         [compojure "1.4.0"]
-                        [figwheel "0.4.1"]
-                        [com.cemerick/piggieback "0.2.1"]]}})
+                        [figwheel "0.4.1"]]}})

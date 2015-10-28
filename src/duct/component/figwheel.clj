@@ -1,6 +1,8 @@
 (ns duct.component.figwheel
   "A component for running Figwheel servers."
-  (:require [clojurescript-build.auto :as auto]
+  (:require [cemerick.piggieback :as piggieback]
+            [cljs.repl :as repl]
+            [clojurescript-build.auto :as auto]
             [com.stuartsierra.component :as component]
             [compojure.core :as compojure :refer [GET]]
             [compojure.route :as route]
@@ -58,15 +60,22 @@
   [{:keys [server]}]
   (fig-core/check-for-css-changes server) nil)
 
+(defn- start-piggieback-repl [server build]
+  {:pre [(some? build)]}
+  (let [build    (auto/prep-build build)
+        compiler (or (:compiler build) (:build-options build))]
+    (piggieback/cljs-repl
+     (fig-repl/repl-env server build)
+     :special-fns  (:special-fns compiler repl/default-special-fns)
+     :output-dir   (:output-dir compiler "out")
+     :analyze-path (:source-paths build))))
+
 (defn cljs-repl
   "Open a ClojureScript REPL through the Figwheel server."
   ([{:keys [server builds]}]
-   (assert (not (empty? builds)))
-   (fig-repl/repl (auto/prep-build (first builds)) server))
+   (start-piggieback-repl server (first builds)))
   ([{:keys [server builds]} build-id]
-   (let [chosen-build (-> (group-by :id builds) (get build-id))]
-     (assert (not (nil? chosen-build)))
-     (fig-repl/repl (auto/prep-build chosen-build) server))))
+   (start-piggieback-repl server (-> (group-by :id builds) (get build-id)))))
 
 (defrecord Server [builds]
   component/Lifecycle
