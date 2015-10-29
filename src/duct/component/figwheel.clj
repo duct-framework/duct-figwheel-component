@@ -101,7 +101,10 @@
   repl/IJavaScriptEnv
   (-setup [_ _]
     (add-repl-print-callback! server)
+    (print "Waiting for browser connection...")
+    (flush)
     (fig-repl/wait-for-connection server)
+    (println " Connected.")
     (Thread/sleep 500))
   (-evaluate [_ _ _ js]
     (fig-repl/wait-for-connection server)
