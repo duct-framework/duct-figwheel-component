@@ -62,6 +62,15 @@ functions at the REPL:
 Running any of those functions will cause the updated code to be
 pushed over websocket to any open clients.
 
+You can also start a Piggieback REPL over the Figwheel connection:
+
+```clojure
+(figwheel/cljs-repl figwheel)           ;; uses first build
+(figwheel/cljs-repl figwheel build-id)  ;; uses specific build-id
+```
+
+This REPL will allow you to evaluate ClojureScript on the browser.
+
 To stop the server:
 
 ```clojure
