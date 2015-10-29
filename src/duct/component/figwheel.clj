@@ -61,6 +61,36 @@
   [{:keys [server]}]
   (fig-core/check-for-css-changes server) nil)
 
+(defrecord Server [builds]
+  component/Lifecycle
+  (start [component]
+    (if (:server component)
+      component
+      (let [server  (start-figwheel-server component)
+            builder (auto/make-conditional-builder (fig-auto/builder server))
+            state   (atom (mapv (partial start-build builder) builds))]
+        (assoc component :server server, :builder builder, :state state))))
+  (stop [component]
+    (if-let [server (:server component)]
+      (do (fig-core/stop-server server)
+          (dissoc component :server :builder :state))
+      component))
+  suspendable/Suspendable
+  (suspend [component] component)
+  (resume [component old-component]
+    (if (and (:server old-component) (= builds (:builds old-component)))
+      (doto (into component (select-keys old-component [:server :builder :state]))
+        (build-cljs)
+        (refresh-css))
+      (do (component/stop old-component)
+          (component/start component)))))
+
+(defn server
+  "Create a new Figwheel server with the supplied option map. See the Figwheel
+  documentation for a full explanation of what options are allowed."
+  [options]
+  (map->Server options))
+
 (defn- repl-print [& args]
   (apply (:print repl/*repl-opts* println) args))
 
@@ -113,33 +143,3 @@
    (start-piggieback-repl server (first builds)))
   ([{:keys [server builds]} build-id]
    (start-piggieback-repl server (-> (group-by :id builds) (get build-id)))))
-
-(defrecord Server [builds]
-  component/Lifecycle
-  (start [component]
-    (if (:server component)
-      component
-      (let [server  (start-figwheel-server component)
-            builder (auto/make-conditional-builder (fig-auto/builder server))
-            state   (atom (mapv (partial start-build builder) builds))]
-        (assoc component :server server, :builder builder, :state state))))
-  (stop [component]
-    (if-let [server (:server component)]
-      (do (fig-core/stop-server server)
-          (dissoc component :server :builder :state))
-      component))
-  suspendable/Suspendable
-  (suspend [component] component)
-  (resume [component old-component]
-    (if (and (:server old-component) (= builds (:builds old-component)))
-      (doto (into component (select-keys old-component [:server :builder :state]))
-        (build-cljs)
-        (refresh-css))
-      (do (component/stop old-component)
-          (component/start component)))))
-
-(defn server
-  "Create a new Figwheel server with the supplied option map. See the Figwheel
-  documentation for a full explanation of what options are allowed."
-  [options]
-  (map->Server options))
