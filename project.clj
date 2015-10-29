@@ -1,4 +1,4 @@
-(defproject duct/figwheel-component "0.2.0"
+(defproject duct/figwheel-component "0.3.0"
   :description "A component for running Figwheel"
   :url "https://github.com/weavejester/duct-figwheel-component"
   :license {:name "Eclipse Public License"
