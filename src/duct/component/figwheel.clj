@@ -3,19 +3,29 @@
   (:require [cemerick.piggieback :as piggieback]
             [cljs.repl :as repl]
             [cljs.stacktrace :as stacktrace]
-            [clojurescript-build.auto :as auto]
-            [com.stuartsierra.component :as component]
+            [clojure.java.io :as io]
             [compojure.core :as compojure :refer [GET]]
             [compojure.route :as route]
-            [figwheel-sidecar.core :as fig-core]
-            [figwheel-sidecar.auto-builder :as fig-auto]
+            [com.stuartsierra.component :as component]
+            [figwheel-sidecar.components.css-watcher :as fig-css]
+            [figwheel-sidecar.components.cljs-autobuild :as fig-auto]
+            [figwheel-sidecar.components.figwheel-server :as fig-server]
+            [figwheel-sidecar.config :as fig-config]
             [figwheel-sidecar.repl :as fig-repl]
+            [figwheel-sidecar.utils :as fig-util]
             [org.httpkit.server :as httpkit]
             [ring.middleware.cors :as cors]
             [suspendable.core :as suspendable]))
 
 (defrecord FigwheelBuild [])
-(defrecord FigwheelServer [])
+
+(defrecord FigwheelServer []
+  fig-server/ChannelServer
+  (-send-message [server channel-id msg-data callback]
+    (let [message (fig-server/prep-message server channel-id msg-data callback)]
+      (swap! (:file-change-atom server) fig-server/append-msg message)))
+  (-connection-data [server]
+    (-> server :connection-count deref)))
 
 (defmethod print-method FigwheelBuild [_ ^java.io.Writer writer]
   (.write writer "#<FigwheelBuild>"))
@@ -25,8 +35,8 @@
 
 (defn- figwheel-server [state]
   (-> (compojure/routes
-       (GET "/figwheel-ws/:desired-build-id" [] (fig-core/reload-handler state))
-       (GET "/figwheel-ws" [] (fig-core/reload-handler state))
+       (GET "/figwheel-ws/:desired-build-id" [] (fig-server/reload-handler state))
+       (GET "/figwheel-ws" [] (fig-server/reload-handler state))
        (route/not-found "<h1>Page not found</h1>"))
       (cors/wrap-cors
        :access-control-allow-origin #".*"
@@ -37,49 +47,83 @@
         :worker-name-prefix "figwh-httpkit-"})))
 
 (defn- start-figwheel-server [opts]
-  (let [state  (fig-core/create-initial-state (fig-core/resolve-ring-handler opts))
+  (let [state  (fig-server/create-initial-state opts)
         server (figwheel-server state)]
     (map->FigwheelServer (assoc state :http-server server))))
 
-(defn- start-build [builder build]
-  (-> build auto/prep-build builder map->FigwheelBuild))
+(defn- find-files [paths]
+  (mapcat (comp file-seq io/file) paths))
+
+(defn- watch-paths [paths]
+  (let [time (volatile! 0)]
+    (fn []
+      (locking time
+        (let [now  (System/currentTimeMillis)
+              then @time]
+          (vreset! time now)
+          (filter #(> (.lastModified %) then) (find-files paths)))))))
+
+(defn- prep-build [{:keys [compiler-env source-paths] :as build}]
+  (-> build
+      (cond-> (fig-config/prepped? build) fig-config/prep-build)
+      (cond-> (not compiler-env)          fig-config/add-compiler-env)
+      (assoc :watcher (watch-paths source-paths))
+      (map->FigwheelBuild)))
+
+(defn- clean-build [build]
+  (fig-util/clean-cljs-build* build))
+
+(defn- start-build [build server files]
+  (fig-auto/figwheel-build
+   {:build-config    (dissoc build :watcher)
+    :figwheel-server server
+    :changed-files   files}))
 
 (defn rebuild-cljs
   "Tell a Figwheel server component to rebuild all ClojureScript source files,
   and to send the new code to the connected clients."
-  [{:keys [state builds builder]}]
-  (reset! state (mapv (partial start-build builder) builds)) nil)
+  [{:keys [server prepped]}]
+  (doseq [{:keys [source-paths] :as build} prepped]
+    (let [files (map str (find-files source-paths))]
+      (fig-util/clean-cljs-build* build)
+      (start-build build server files))))
 
 (defn build-cljs
   "Tell a Figwheel server component to build any modified ClojureScript source
   files, and to send the new code to the connected clients."
-  [{:keys [state builder]}]
-  (swap! state (partial mapv builder)) nil)
+  [{:keys [server prepped]}]
+  (doseq [{:keys [watcher] :as build} prepped]
+    (when-let [files (seq (map str (watcher)))]
+      (start-build build server files))))
 
 (defn refresh-css
   "Tell a Figwheel server component to update the CSS of connected clients."
-  [{:keys [server]}]
-  (fig-core/check-for-css-changes server) nil)
+  [{:keys [server css-watch]}]
+  (fig-css/handle-css-notification {:figwheel-server server} (css-watch)) nil)
 
 (defrecord Server [builds]
   component/Lifecycle
   (start [component]
     (if (:server component)
       component
-      (let [server  (start-figwheel-server component)
-            builder (auto/make-conditional-builder (fig-auto/builder server))
-            state   (atom (mapv (partial start-build builder) builds))]
-        (assoc component :server server, :builder builder, :state state))))
+      (-> component
+          (assoc :server  (start-figwheel-server component))
+          (assoc :prepped (mapv prep-build builds))
+          (cond-> (:css-dirs component)
+            (assoc :css-watch (watch-paths (:css-dirs component))))
+          (doto
+            (build-cljs)
+            (refresh-css)))))
   (stop [component]
     (if-let [server (:server component)]
-      (do (fig-core/stop-server server)
-          (dissoc component :server :builder :state))
+      (do (fig-server/stop-server server)
+          (dissoc component :server :prepped :css-watch))
       component))
   suspendable/Suspendable
   (suspend [component] component)
   (resume [component old-component]
     (if (and (:server old-component) (= builds (:builds old-component)))
-      (doto (into component (select-keys old-component [:server :builder :state]))
+      (doto (into component (select-keys old-component [:server :prepped :css-watch]))
         (build-cljs)
         (refresh-css))
       (do (component/stop old-component)
@@ -132,7 +176,7 @@
 
 (defn- start-piggieback-repl [server build]
   {:pre [(some? build)]}
-  (let [build    (auto/prep-build build)
+  (let [build    (fig-config/prep-build build)
         compiler (or (:compiler build) (:build-options build))]
     (piggieback/cljs-repl
      (figwheel-env server build)
