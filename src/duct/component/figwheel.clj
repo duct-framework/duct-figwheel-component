@@ -135,58 +135,19 @@
   [options]
   (map->Server options))
 
-(defn- repl-print [& args]
-  (apply (:print repl/*repl-opts* println) args))
-
-(defn- add-repl-print-callback! [{:keys [browser-callbacks]}]
-  (swap! browser-callbacks assoc "figwheel-repl-print" #(apply repl-print %)))
-
-(defrecord FigwheelEnv [server]
-  repl/IJavaScriptEnv
-  (-setup [_ _]
-    (add-repl-print-callback! server)
-    (print "Waiting for browser connection...")
-    (flush)
-    (fig-repl/wait-for-connection server)
-    (println " Connected.")
-    (Thread/sleep 500))
-  (-evaluate [_ _ _ js]
-    (fig-repl/wait-for-connection server)
-    (fig-repl/eval-js server js))
-  (-load [_ _ url]
-    (fig-repl/wait-for-connection server)
-    (fig-repl/eval-js server (slurp url)))
-  (-tear-down [_] true)
-  repl/IParseStacktrace
-  (-parse-stacktrace [repl-env _ error build-options]
-    (stacktrace/parse-stacktrace
-     (merge repl-env (fig-repl/extract-host-and-port (:base-path error)))
-     (:stacktrace error)
-     {:ua-product (:ua-product error)}
-     build-options))
-  repl/IPrintStacktrace
-  (-print-stacktrace [_ stacktrace _ build-options]
-    (doseq [{:keys [function file url line column] :as line-tr}
-            (repl/mapped-stacktrace stacktrace build-options)
-            :when (fig-repl/valid-stack-line? line-tr)]
-      (repl-print "\t" (str function " (" (str (or url file)) ":" line ":" column ")")))))
-
-(defn- figwheel-env [server build]
-  (assoc (->FigwheelEnv server) :cljs.env/compiler (:compiler-env build)))
-
 (defn- start-piggieback-repl [server build]
   {:pre [(some? build)]}
-  (let [build    (fig-config/prep-build build)
-        compiler (or (:compiler build) (:build-options build))]
+  (let [compiler (or (:compiler build) (:build-options build))]
     (piggieback/cljs-repl
-     (figwheel-env server build)
+     (fig-repl/repl-env server build)
      :special-fns  (:special-fns compiler repl/default-special-fns)
      :output-dir   (:output-dir compiler "out")
+     :compiler-env (:compiler-env build)
      :analyze-path (:source-paths build))))
 
 (defn cljs-repl
   "Open a ClojureScript REPL through the Figwheel server."
-  ([{:keys [server builds]}]
-   (start-piggieback-repl server (first builds)))
-  ([{:keys [server builds]} build-id]
-   (start-piggieback-repl server (-> (group-by :id builds) (get build-id)))))
+  ([{:keys [server prepped]}]
+   (start-piggieback-repl server (first prepped)))
+  ([{:keys [server prepped]} build-id]
+   (start-piggieback-repl server (-> (group-by :id prepped) (get build-id)))))
