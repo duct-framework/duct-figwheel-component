@@ -4,14 +4,14 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [org.clojure/clojurescript "1.7.228" :scope "provided"]
                  [com.stuartsierra/component "0.3.1"]
                  [suspendable "0.1.1"]
                  [figwheel-sidecar "0.5.0-6"]
                  [http-kit "2.1.19"]
                  [com.cemerick/piggieback "0.2.1"]]
   :profiles
-  {:dev {:source-paths   ["dev/src/clj"]
+  {:provided {:dependencies [[org.clojure/clojurescript "1.7.228"]]}
+   :dev {:source-paths   ["dev/src/clj"]
          :resource-paths ["dev/resources" "target/js"]
          :dependencies [[reloaded.repl "0.2.1"]
                         [ring-jetty-component "0.3.0"]
