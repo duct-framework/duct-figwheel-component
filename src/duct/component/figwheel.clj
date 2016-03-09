@@ -7,6 +7,7 @@
             [compojure.core :as compojure :refer [GET]]
             [compojure.route :as route]
             [com.stuartsierra.component :as component]
+            [figwheel-sidecar.build-utils :as fig-build]
             [figwheel-sidecar.components.css-watcher :as fig-css]
             [figwheel-sidecar.components.cljs-autobuild :as fig-auto]
             [figwheel-sidecar.components.figwheel-server :as fig-server]
@@ -66,7 +67,7 @@
 (defn- prep-build [{:keys [compiler-env source-paths] :as build}]
   (-> build
       (cond-> (fig-config/prepped? build) fig-config/prep-build)
-      (cond-> (not compiler-env)          fig-config/add-compiler-env)
+      (cond-> (not compiler-env)          fig-build/add-compiler-env)
       (assoc :watcher (watch-paths source-paths))
       (map->FigwheelBuild)))
 

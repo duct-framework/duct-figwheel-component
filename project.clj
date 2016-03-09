@@ -7,7 +7,7 @@
                  [org.clojure/clojurescript "1.7.170" :scope "provided"]
                  [com.stuartsierra/component "0.3.0"]
                  [suspendable "0.1.0"]
-                 [figwheel-sidecar "0.5.0-1"]
+                 [figwheel-sidecar "0.5.0-6"]
                  [http-kit "2.1.19"]
                  [com.cemerick/piggieback "0.2.1"]]
   :profiles
@@ -16,6 +16,6 @@
          :dependencies [[reloaded.repl "0.2.1"]
                         [ring-jetty-component "0.3.0"]
                         [compojure "1.4.0"]
-                        [figwheel "0.5.0-1"]
+                        [figwheel "0.5.0-6"]
                         [org.clojure/tools.nrepl "0.2.12"]]
          :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}})
