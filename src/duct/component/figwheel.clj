@@ -140,7 +140,7 @@
   {:pre [(some? build)]}
   (let [compiler (or (:compiler build) (:build-options build))]
     (piggieback/cljs-repl
-     (fig-repl/repl-env server build)
+     (fig-repl/cljs-repl-env build server)
      :special-fns  (:special-fns compiler repl/default-special-fns)
      :output-dir   (:output-dir compiler "out")
      :compiler-env (:compiler-env build)
