@@ -66,8 +66,8 @@
 
 (defn- prep-build [{:keys [compiler-env source-paths] :as build}]
   (-> build
-      (cond-> (fig-config/prepped? build) fig-config/prep-build)
-      (cond-> (not compiler-env)          fig-build/add-compiler-env)
+      (cond-> (not (fig-config/prepped? build)) fig-config/prep-build)
+      (cond-> (not compiler-env)                fig-build/add-compiler-env)
       (assoc :watcher (watch-paths source-paths))
       (map->FigwheelBuild)))
 
