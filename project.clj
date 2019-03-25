@@ -8,7 +8,7 @@
                  [suspendable "0.1.1"]
                  [figwheel-sidecar "0.5.14"]
                  [http-kit "2.2.0"]
-                 [com.cemerick/piggieback "0.2.1"]]
+                 [cider/piggieback "0.4.0"]]
   :profiles
   {:provided {:dependencies [[org.clojure/clojurescript "1.9.908"]]}
    :dev {:source-paths   ["dev/src/clj"]
@@ -17,5 +17,5 @@
                         [ring-jetty-component "0.3.1"]
                         [compojure "1.5.1"]
                         [figwheel "0.5.14"]
-                        [org.clojure/tools.nrepl "0.2.12"]]
-         :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]}}})
+                        [nrepl "0.6.0"]]
+         :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}})

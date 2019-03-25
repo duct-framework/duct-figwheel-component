@@ -1,6 +1,6 @@
 (ns duct.component.figwheel
   "A component for running Figwheel servers."
-  (:require [cemerick.piggieback :as piggieback]
+  (:require [cider.piggieback :as piggieback]
             [cljs.repl :as repl]
             [cljs.stacktrace :as stacktrace]
             [clojure.java.io :as io]
